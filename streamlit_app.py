@@ -24,7 +24,7 @@ st.markdown(
     - Trial Status
     - TCV by Month
     - Trial Opt-Outs
-    - Auto vs Manual Renewal Sales
+    - Auto vs Manual Renewal
     """
 )
 
@@ -116,7 +116,7 @@ tab1, tab2, tab3, tab4 = st.tabs([
     "Trial Status",
     "TCV",
     "Opt Outs",
-    "Renewal Sales"
+    "AR vs MR"
 ])
 
 # --------------------------------------------------
