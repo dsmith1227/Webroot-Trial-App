@@ -1,30 +1,49 @@
 import streamlit as st
 import pandas as pd
-import plotly.express as px
-import plotly.graph_objects as go
+
+# --------------------------------------------------
+# Page Configuration
+# --------------------------------------------------
 
 st.set_page_config(
-    page_title="Product Peer Analytics",
+    page_title="Webroot Trial Dashboard",
     page_icon="📊",
     layout="wide"
 )
 
 # --------------------------------------------------
-# Data Loading
+# Title
 # --------------------------------------------------
 
+st.title("Webroot Trial Dashboard")
+
+st.markdown(
+    """
+    Upload a trial metrics CSV file to view:
+    
+    - Trial Status
+    - TCV by Month
+    - Trial Opt-Outs
+    - Auto vs Manual Renewal Sales
+    """
+)
+
 # --------------------------------------------------
-# Data Upload
+# File Upload
 # --------------------------------------------------
 
 uploaded_file = st.sidebar.file_uploader(
-    "Upload Product Metrics CSV",
+    "Upload Trial Metrics CSV",
     type=["csv"]
 )
 
 if uploaded_file is None:
     st.info("Please upload a CSV file to begin.")
     st.stop()
+
+# --------------------------------------------------
+# Load Data
+# --------------------------------------------------
 
 @st.cache_data
 def load_data(file):
@@ -33,212 +52,155 @@ def load_data(file):
 df = load_data(uploaded_file)
 
 # --------------------------------------------------
-# Sidebar
+# Validate Required Columns
 # --------------------------------------------------
 
-st.sidebar.title("Peer Analysis")
+required_columns = [
+    "product_id",
+    "month",
+    "trial_starts",
+    "active_trials",
+    "opt_outs",
+    "conversions",
+    "auto_renew_sales",
+    "manual_renew_sales",
+    "tcv"
+]
+
+missing_columns = [
+    col for col in required_columns
+    if col not in df.columns
+]
+
+if missing_columns:
+    st.error(
+        f"Missing required columns: {', '.join(missing_columns)}"
+    )
+    st.stop()
+
+# --------------------------------------------------
+# Filters
+# --------------------------------------------------
+
+st.sidebar.header("Filters")
 
 products = sorted(df["product_id"].unique())
 
-selected_product = st.sidebar.selectbox(
-    "Primary Product",
-    products
-)
-
-peer_products = st.sidebar.multiselect(
-    "Peer Products",
+selected_products = st.sidebar.multiselect(
+    "Products",
     products,
-    default=[p for p in products if p != selected_product][:5]
+    default=products
 )
 
-comparison_set = [selected_product] + peer_products
-
-filtered = df[df["product_id"].isin(comparison_set)]
+if selected_products:
+    df = df[df["product_id"].isin(selected_products)]
 
 # --------------------------------------------------
-# KPI calculations
+# Dashboard Tabs
 # --------------------------------------------------
 
-latest_month = filtered["month"].max()
+tab1, tab2, tab3, tab4 = st.tabs([
+    "Trial Status",
+    "TCV",
+    "Opt Outs",
+    "Renewal Sales"
+])
 
-latest = filtered[filtered["month"] == latest_month]
+# --------------------------------------------------
+# TAB 1 - Trial Status
+# --------------------------------------------------
 
-current_product = latest[
-    latest["product_id"] == selected_product
-]
+with tab1:
 
-if len(current_product):
+    st.subheader("Trial Status Summary")
 
-    row = current_product.iloc[0]
-
-    conversion_rate = (
-        row["conversions"] / row["trial_starts"] * 100
-        if row["trial_starts"] else 0
+    trial_summary = (
+        df.groupby("product_id")
+        .agg(
+            Trial_Starts=("trial_starts", "sum"),
+            Active_Trials=("active_trials", "sum"),
+            Opt_Outs=("opt_outs", "sum"),
+            Conversions=("conversions", "sum")
+        )
+        .reset_index()
     )
 
-    opt_out_rate = (
-        row["opt_outs"] / row["trial_starts"] * 100
-        if row["trial_starts"] else 0
-    )
-
-    st.title("📈 Product Peer Analysis Dashboard")
-
-    col1, col2, col3, col4 = st.columns(4)
-
-    col1.metric(
-        "Revenue",
-        f"${row['revenue']:,.0f}"
-    )
-
-    col2.metric(
-        "TCV",
-        f"${row['tcv']:,.0f}"
-    )
-
-    col3.metric(
-        "Conversion Rate",
-        f"{conversion_rate:.1f}%"
-    )
-
-    col4.metric(
-        "Opt Out Rate",
-        f"{opt_out_rate:.1f}%"
+    st.dataframe(
+        trial_summary,
+        use_container_width=True,
+        hide_index=True
     )
 
 # --------------------------------------------------
-# Revenue Trend
+# TAB 2 - TCV
 # --------------------------------------------------
 
-st.subheader("Revenue Trend")
+with tab2:
 
-fig = px.line(
-    filtered,
-    x="month",
-    y="revenue",
-    color="product_id",
-    markers=True
-)
+    st.subheader("TCV by Product and Month")
 
-st.plotly_chart(fig, use_container_width=True)
+    tcv_table = df.pivot_table(
+        index="month",
+        columns="product_id",
+        values="tcv",
+        aggfunc="sum"
+    )
 
-# --------------------------------------------------
-# TCV Trend
-# --------------------------------------------------
-
-st.subheader("TCV Trend")
-
-fig = px.line(
-    filtered,
-    x="month",
-    y="tcv",
-    color="product_id",
-    markers=True
-)
-
-st.plotly_chart(fig, use_container_width=True)
+    st.dataframe(
+        tcv_table.style.format("${:,.0f}"),
+        use_container_width=True
+    )
 
 # --------------------------------------------------
-# Conversion Benchmark
+# TAB 3 - Opt Outs
 # --------------------------------------------------
 
-st.subheader("Conversion Rate Benchmark")
+with tab3:
 
-benchmark_df = latest.copy()
+    st.subheader("Opt Outs by Product and Month")
 
-benchmark_df["conversion_rate"] = (
-    benchmark_df["conversions"] /
-    benchmark_df["trial_starts"]
-) * 100
+    optout_table = df.pivot_table(
+        index="month",
+        columns="product_id",
+        values="opt_outs",
+        aggfunc="sum"
+    )
 
-fig = px.bar(
-    benchmark_df.sort_values(
-        "conversion_rate",
-        ascending=False
-    ),
-    x="product_id",
-    y="conversion_rate",
-    color="conversion_rate",
-    text_auto=".1f"
-)
-
-st.plotly_chart(fig, use_container_width=True)
+    st.dataframe(
+        optout_table,
+        use_container_width=True
+    )
 
 # --------------------------------------------------
-# Revenue vs Audience
+# TAB 4 - Renewal Sales
 # --------------------------------------------------
 
-st.subheader("Revenue vs Audience")
+with tab4:
 
-fig = px.scatter(
-    latest,
-    x="audience_size",
-    y="revenue",
-    size="subscribers",
-    color="product_id",
-    hover_name="product_id",
-    size_max=60
-)
+    st.subheader("Auto Renew vs Manual Renew Sales")
 
-st.plotly_chart(fig, use_container_width=True)
+    renewal_summary = (
+        df.groupby("product_id")
+        .agg(
+            Auto_Renew_Sales=("auto_renew_sales", "sum"),
+            Manual_Renew_Sales=("manual_renew_sales", "sum")
+        )
+        .reset_index()
+    )
 
-# --------------------------------------------------
-# Peer Comparison Table
-# --------------------------------------------------
-
-st.subheader("Peer Comparison")
-
-comparison = latest.copy()
-
-comparison["conversion_rate"] = (
-    comparison["conversions"] /
-    comparison["trial_starts"]
-) * 100
-
-comparison["opt_out_rate"] = (
-    comparison["opt_outs"] /
-    comparison["trial_starts"]
-) * 100
-
-st.dataframe(
-    comparison[
-        [
-            "product_id",
-            "trial_starts",
-            "active_trials",
-            "conversions",
-            "conversion_rate",
-            "opt_out_rate",
-            "subscribers",
-            "revenue",
-            "tcv"
-        ]
-    ],
-    use_container_width=True
-)
+    st.dataframe(
+        renewal_summary,
+        use_container_width=True,
+        hide_index=True
+    )
 
 # --------------------------------------------------
-# Revenue Index
+# Raw Data
 # --------------------------------------------------
 
-st.subheader("Peer Revenue Index")
+with st.expander("View Raw Data"):
 
-selected_revenue = float(
-    latest.loc[
-        latest["product_id"] == selected_product,
-        "revenue"
-    ].iloc[0]
-)
-
-latest["revenue_index"] = (
-    latest["revenue"] /
-    selected_revenue
-) * 100
-
-fig = px.bar(
-    latest,
-    x="product_id",
-    y="revenue_index",
-    color="revenue_index"
-)
-
-st.plotly_chart(fig, use_container_width=True)
+    st.dataframe(
+        df,
+        use_container_width=True
+    )
