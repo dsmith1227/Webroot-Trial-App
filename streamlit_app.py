@@ -106,7 +106,7 @@ selected_month = st.sidebar.multiselect(
 filtered_df = df[
     (df["product_id"].isin(selected_products))
     &
-    (df["month"] == selected_month)
+    (df["month"].isin(selected_month))
 ]
 # --------------------------------------------------
 # Dashboard Tabs
