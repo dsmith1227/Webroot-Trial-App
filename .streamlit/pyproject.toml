@@ -1,5 +1,5 @@
 [project]
-name = "Test App"
+name = "test-app"
 version = "0.0.1"
 description = "Test application for Webroot trial reporting"
 readme = "README.md"
