@@ -152,7 +152,7 @@ with tab2:
 
     st.subheader("TCV by Product and Month")
 
-    tcv_table = df.pivot_table(
+    tcv_table = filtered_df.pivot_table(
         index="month",
         columns="product_id",
         values="tcv",
@@ -172,7 +172,7 @@ with tab3:
 
     st.subheader("Opt Outs by Product and Month")
 
-    optout_table = df.pivot_table(
+    optout_table = filtered_df.pivot_table(
         index="month",
         columns="product_id",
         values="opt_outs",
