@@ -125,27 +125,74 @@ tab1, tab2, tab3, tab4 = st.tabs([
 
 with tab1:
 
-    st.subheader("Trial Status Summary")
+    st.subheader("Trial Status")
 
-    trial_summary = (
-        filtered_df[
-            [
-                "month",
-                "product_id",
-                "trial_starts",
-                "active_trials",
-                "opt_outs",
-                "conversions"
-             ]
+    trial_summary = filtered_df[
+        [
+            "month",
+            "product_id",
+            "trial_starts",
+            "active_trials",
+            "opt_outs",
+            "conversions"
         ]
-        .sort_values(["month", "product_id"])
-            
-    )
+    ]
 
     st.dataframe(
         trial_summary,
         use_container_width=True,
         hide_index=True
+    )
+
+    st.divider()
+
+    st.subheader("Create Visualization")
+
+    chart_type = st.selectbox(
+        "Chart Type",
+        ["Bar", "Line", "Area"],
+        key="trial_chart"
+    )
+
+    metric = st.selectbox(
+        "Metric",
+        [
+            "trial_starts",
+            "active_trials",
+            "opt_outs",
+            "conversions"
+        ],
+        key="trial_metric"
+    )
+
+    if chart_type == "Bar":
+        fig = px.bar(
+            filtered_df,
+            x="month",
+            y=metric,
+            color="product_id"
+        )
+
+    elif chart_type == "Line":
+        fig = px.line(
+            filtered_df,
+            x="month",
+            y=metric,
+            color="product_id",
+            markers=True
+        )
+
+    else:
+        fig = px.area(
+            filtered_df,
+            x="month",
+            y=metric,
+            color="product_id"
+        )
+
+    st.plotly_chart(
+        fig,
+        use_container_width=True
     )
 
 # --------------------------------------------------
