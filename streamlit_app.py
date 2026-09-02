@@ -103,11 +103,11 @@ selected_month = st.sidebar.selectbox(
     index=len(months)-1
 )
 
-monthly_df = df[df["month"] == selected_month]
-
-if selected_month:
-    filtered_df = df[df["product_id"].isin(selected_products)]
-
+filtered_df = df[
+    (df["product_id"].isin(selected_products))
+    &
+    (df["month"] == selected_month]
+]
 # --------------------------------------------------
 # Dashboard Tabs
 # --------------------------------------------------
@@ -152,7 +152,11 @@ with tab2:
 
     st.subheader("TCV by Product and Month")
 
-    tcv_table = filtered_df.pivot_table(
+    product_filtered_df = df[
+         df["product_id"].isin(selected_products)
+    ]
+    
+    tcv_table = product_filtered_df.pivot_table(
         index="month",
         columns="product_id",
         values="tcv",
