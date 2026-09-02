@@ -95,6 +95,16 @@ selected_products = st.sidebar.multiselect(
 if selected_products:
     df = df[df["product_id"].isin(selected_products)]
 
+months = sorted(df["month"].unique())
+
+selected_month = st.sidebar.selectbox(
+    "Month",
+    months,
+    index=len(months)-1
+)
+
+monthly_df = df[df["month"] == selected_month]
+
 # --------------------------------------------------
 # Dashboard Tabs
 # --------------------------------------------------
