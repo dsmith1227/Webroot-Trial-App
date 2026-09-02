@@ -129,14 +129,14 @@ with tab1:
 
     trial_summary = (
         filtered_df[
-        [
+            [
                 "month",
                 "product_id",
                 "trial_starts",
                 "active_trials",
                 "opt_outs",
                 "conversions"
-        [
+             ]
         ]
         .sort_values(["month", "product_id"])
             
