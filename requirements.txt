@@ -1,5 +1,6 @@
-stockpeers
-stockpeers==0.2.0
-yfinance
-curl-cffi
-cffi
+streamlit
+pandas
+numpy
+plotly
+openpyxl
+scikit-learn
