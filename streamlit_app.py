@@ -105,6 +105,9 @@ selected_month = st.sidebar.selectbox(
 
 monthly_df = df[df["month"] == selected_month]
 
+if selected_month:
+    filtered_df = df[df["product_id"].isin(selected_products)]
+
 # --------------------------------------------------
 # Dashboard Tabs
 # --------------------------------------------------
