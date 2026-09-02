@@ -128,14 +128,18 @@ with tab1:
     st.subheader("Trial Status Summary")
 
     trial_summary = (
-        filtered_df.groupby("product_id")
-        .agg(
-            Trial_Starts=("trial_starts", "sum"),
-            Active_Trials=("active_trials", "sum"),
-            Opt_Outs=("opt_outs", "sum"),
-            Conversions=("conversions", "sum")
-        )
-        .reset_index()
+        filtered_df[
+        [
+                "month",
+                "product_id",
+                "trial_starts",
+                "active_trials",
+                "opt_outs",
+                "conversions"
+        [
+        ]
+        .sort_values(["month", "product_id"])
+            
     )
 
     st.dataframe(
