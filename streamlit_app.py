@@ -97,10 +97,10 @@ if selected_products:
 
 months = sorted(df["month"].unique())
 
-selected_month = st.sidebar.selectbox(
+selected_month = st.sidebar.multiselect(
     "Month",
     months,
-    index=len(months)-1
+    default=months
 )
 
 filtered_df = df[
