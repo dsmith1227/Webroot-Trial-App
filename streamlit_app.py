@@ -1,5 +1,6 @@
 import streamlit as st
 import pandas as pd
+import plotly.express as px
 
 # --------------------------------------------------
 # Page Configuration
@@ -92,13 +93,10 @@ selected_products = st.sidebar.multiselect(
     default=products
 )
 
-if selected_products:
-    df = df[df["product_id"].isin(selected_products)]
-
 months = sorted(df["month"].unique())
 
-selected_month = st.sidebar.multiselect(
-    "Month",
+selected_months = st.sidebar.multiselect(
+    "Months",
     months,
     default=months
 )
@@ -106,7 +104,7 @@ selected_month = st.sidebar.multiselect(
 filtered_df = df[
     (df["product_id"].isin(selected_products))
     &
-    (df["month"].isin(selected_month))
+    (df["month"].isin(selected_months))
 ]
 # --------------------------------------------------
 # Dashboard Tabs
