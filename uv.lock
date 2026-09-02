@@ -1,3 +1,5 @@
+[tool.uv]
+package=false
 version = 1
 revision = 3
 requires-python = ">=3.10"
