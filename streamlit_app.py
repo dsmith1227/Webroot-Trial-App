@@ -1,357 +1,231 @@
-# -*- coding: utf-8 -*-
-# Copyright 2024-2025 Streamlit Inc.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#    http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
 import streamlit as st
-import yfinance as yf
 import pandas as pd
-import altair as alt
+import plotly.express as px
+import plotly.graph_objects as go
 
 st.set_page_config(
-    page_title="Stock peer analysis dashboard",
-    page_icon=":chart_with_upwards_trend:",
-    layout="wide",
+    page_title="Product Peer Analytics",
+    page_icon="📊",
+    layout="wide"
 )
 
-"""
-# :material/query_stats: Stock peer analysis
+# --------------------------------------------------
+# Data Loading
+# --------------------------------------------------
 
-Easily compare stocks against others in their peer group.
-"""
+@st.cache_data
+def load_data():
+    return pd.read_csv("product_metrics.csv")
 
-""  # Add some space.
+df = load_data()
 
-cols = st.columns([1, 3])
-# Will declare right cell later to avoid showing it when no data.
+# --------------------------------------------------
+# Sidebar
+# --------------------------------------------------
 
-STOCKS = [
-    "AAPL",
-    "ABBV",
-    "ACN",
-    "ADBE",
-    "ADP",
-    "AMD",
-    "AMGN",
-    "AMT",
-    "AMZN",
-    "APD",
-    "AVGO",
-    "AXP",
-    "BA",
-    "BK",
-    "BKNG",
-    "BMY",
-    "BRK.B",
-    "BSX",
-    "C",
-    "CAT",
-    "CI",
-    "CL",
-    "CMCSA",
-    "COST",
-    "CRM",
-    "CSCO",
-    "CVX",
-    "DE",
-    "DHR",
-    "DIS",
-    "DUK",
-    "ELV",
-    "EOG",
-    "EQR",
-    "FDX",
-    "GD",
-    "GE",
-    "GILD",
-    "GOOG",
-    "GOOGL",
-    "HD",
-    "HON",
-    "HUM",
-    "IBM",
-    "ICE",
-    "INTC",
-    "ISRG",
-    "JNJ",
-    "JPM",
-    "KO",
-    "LIN",
-    "LLY",
-    "LMT",
-    "LOW",
-    "MA",
-    "MCD",
-    "MDLZ",
-    "META",
-    "MMC",
-    "MO",
-    "MRK",
-    "MSFT",
-    "NEE",
-    "NFLX",
-    "NKE",
-    "NOW",
-    "NVDA",
-    "ORCL",
-    "PEP",
-    "PFE",
-    "PG",
-    "PLD",
-    "PM",
-    "PSA",
-    "REGN",
-    "RTX",
-    "SBUX",
-    "SCHW",
-    "SLB",
-    "SO",
-    "SPGI",
-    "T",
-    "TJX",
-    "TMO",
-    "TSLA",
-    "TXN",
-    "UNH",
-    "UNP",
-    "UPS",
-    "V",
-    "VZ",
-    "WFC",
-    "WM",
-    "WMT",
-    "XOM",
+st.sidebar.title("Peer Analysis")
+
+products = sorted(df["product_id"].unique())
+
+selected_product = st.sidebar.selectbox(
+    "Primary Product",
+    products
+)
+
+peer_products = st.sidebar.multiselect(
+    "Peer Products",
+    products,
+    default=[p for p in products if p != selected_product][:5]
+)
+
+comparison_set = [selected_product] + peer_products
+
+filtered = df[df["product_id"].isin(comparison_set)]
+
+# --------------------------------------------------
+# KPI calculations
+# --------------------------------------------------
+
+latest_month = filtered["month"].max()
+
+latest = filtered[filtered["month"] == latest_month]
+
+current_product = latest[
+    latest["product_id"] == selected_product
 ]
 
-DEFAULT_STOCKS = ["AAPL", "MSFT", "GOOGL", "NVDA", "AMZN", "TSLA", "META"]
+if len(current_product):
 
+    row = current_product.iloc[0]
 
-def stocks_to_str(stocks):
-    return ",".join(stocks)
+    conversion_rate = (
+        row["conversions"] / row["trial_starts"] * 100
+        if row["trial_starts"] else 0
+    )
 
+    opt_out_rate = (
+        row["opt_outs"] / row["trial_starts"] * 100
+        if row["trial_starts"] else 0
+    )
 
-if "tickers_input" not in st.session_state:
-    st.session_state.tickers_input = st.query_params.get(
-        "stocks", stocks_to_str(DEFAULT_STOCKS)
-    ).split(",")
+    st.title("📈 Product Peer Analysis Dashboard")
 
+    col1, col2, col3, col4 = st.columns(4)
 
-# Callback to update query param when input changes
-def update_query_param():
-    if st.session_state.tickers_input:
-        st.query_params["stocks"] = stocks_to_str(st.session_state.tickers_input)
-    else:
-        st.query_params.pop("stocks", None)
+    col1.metric(
+        "Revenue",
+        f"${row['revenue']:,.0f}"
+    )
 
+    col2.metric(
+        "TCV",
+        f"${row['tcv']:,.0f}"
+    )
 
-top_left_cell = cols[0].container(
-    border=True, height="stretch", vertical_alignment="center"
+    col3.metric(
+        "Conversion Rate",
+        f"{conversion_rate:.1f}%"
+    )
+
+    col4.metric(
+        "Opt Out Rate",
+        f"{opt_out_rate:.1f}%"
+    )
+
+# --------------------------------------------------
+# Revenue Trend
+# --------------------------------------------------
+
+st.subheader("Revenue Trend")
+
+fig = px.line(
+    filtered,
+    x="month",
+    y="revenue",
+    color="product_id",
+    markers=True
 )
 
-with top_left_cell:
-    # Selectbox for stock tickers
-    tickers = st.multiselect(
-        "Stock tickers",
-        options=sorted(set(STOCKS) | set(st.session_state.tickers_input)),
-        default=st.session_state.tickers_input,
-        placeholder="Choose stocks to compare. Example: NVDA",
-        accept_new_options=True,
-    )
+st.plotly_chart(fig, use_container_width=True)
 
-# Time horizon selector
-horizon_map = {
-    "1 Months": "1mo",
-    "3 Months": "3mo",
-    "6 Months": "6mo",
-    "1 Year": "1y",
-    "5 Years": "5y",
-    "10 Years": "10y",
-    "20 Years": "20y",
-}
+# --------------------------------------------------
+# TCV Trend
+# --------------------------------------------------
 
-with top_left_cell:
-    # Buttons for picking time horizon
-    horizon = st.pills(
-        "Time horizon",
-        options=list(horizon_map.keys()),
-        default="6 Months",
-    )
+st.subheader("TCV Trend")
 
-tickers = [t.upper() for t in tickers]
-
-# Update query param when text input changes
-if tickers:
-    st.query_params["stocks"] = stocks_to_str(tickers)
-else:
-    # Clear the param if input is empty
-    st.query_params.pop("stocks", None)
-
-if not tickers:
-    top_left_cell.info("Pick some stocks to compare", icon=":material/info:")
-    st.stop()
-
-
-right_cell = cols[1].container(
-    border=True, height="stretch", vertical_alignment="center"
+fig = px.line(
+    filtered,
+    x="month",
+    y="tcv",
+    color="product_id",
+    markers=True
 )
 
+st.plotly_chart(fig, use_container_width=True)
 
-@st.cache_resource(show_spinner=False, ttl="6h")
-def load_data(tickers, period):
-    tickers_obj = yf.Tickers(tickers)
-    data = tickers_obj.history(period=period)
-    if data is None:
-        raise RuntimeError("YFinance returned no data.")
-    return data["Close"]
+# --------------------------------------------------
+# Conversion Benchmark
+# --------------------------------------------------
 
+st.subheader("Conversion Rate Benchmark")
 
-# Load the data
-try:
-    data = load_data(tickers, horizon_map[horizon])
-except yf.exceptions.YFRateLimitError as e:
-    st.warning("YFinance is rate-limiting us :(\nTry again later.")
-    load_data.clear()  # Remove the bad cache entry.
-    st.stop()
+benchmark_df = latest.copy()
 
-empty_columns = data.columns[data.isna().all()].tolist()
+benchmark_df["conversion_rate"] = (
+    benchmark_df["conversions"] /
+    benchmark_df["trial_starts"]
+) * 100
 
-if empty_columns:
-    st.error(f"Error loading data for the tickers: {', '.join(empty_columns)}.")
-    st.stop()
-
-# Normalize prices (start at 1)
-normalized = data.div(data.iloc[0])
-
-latest_norm_values = {normalized[ticker].iat[-1]: ticker for ticker in tickers}
-max_norm_value = max(latest_norm_values.items())
-min_norm_value = min(latest_norm_values.items())
-
-bottom_left_cell = cols[0].container(
-    border=True, height="stretch", vertical_alignment="center"
+fig = px.bar(
+    benchmark_df.sort_values(
+        "conversion_rate",
+        ascending=False
+    ),
+    x="product_id",
+    y="conversion_rate",
+    color="conversion_rate",
+    text_auto=".1f"
 )
 
-with bottom_left_cell:
-    cols = st.columns(2)
-    cols[0].metric(
-        "Best stock",
-        max_norm_value[1],
-        delta=f"{round(max_norm_value[0] * 100)}%",
-        width="content",
-    )
-    cols[1].metric(
-        "Worst stock",
-        min_norm_value[1],
-        delta=f"{round(min_norm_value[0] * 100)}%",
-        width="content",
-    )
+st.plotly_chart(fig, use_container_width=True)
 
+# --------------------------------------------------
+# Revenue vs Audience
+# --------------------------------------------------
 
-# Plot normalized prices
-with right_cell:
-    st.altair_chart(
-        alt.Chart(
-            normalized.reset_index().melt(
-                id_vars=["Date"], var_name="Stock", value_name="Normalized price"
-            )
-        )
-        .mark_line()
-        .encode(
-            alt.X("Date:T"),
-            alt.Y("Normalized price:Q").scale(zero=False),
-            alt.Color("Stock:N"),
-        )
-        .properties(height=400)
-    )
+st.subheader("Revenue vs Audience")
 
-""
-""
+fig = px.scatter(
+    latest,
+    x="audience_size",
+    y="revenue",
+    size="subscribers",
+    color="product_id",
+    hover_name="product_id",
+    size_max=60
+)
 
-# Plot individual stock vs peer average
-"""
-## Individual stocks vs peer average
+st.plotly_chart(fig, use_container_width=True)
 
-For the analysis below, the "peer average" when analyzing stock X always
-excludes X itself.
-"""
+# --------------------------------------------------
+# Peer Comparison Table
+# --------------------------------------------------
 
-if len(tickers) <= 1:
-    st.warning("Pick 2 or more tickers to compare them")
-    st.stop()
+st.subheader("Peer Comparison")
 
-NUM_COLS = 4
-cols = st.columns(NUM_COLS)
+comparison = latest.copy()
 
-for i, ticker in enumerate(tickers):
-    # Calculate peer average (excluding current stock)
-    peers = normalized.drop(columns=[ticker])
-    peer_avg = peers.mean(axis=1)
+comparison["conversion_rate"] = (
+    comparison["conversions"] /
+    comparison["trial_starts"]
+) * 100
 
-    # Create DataFrame with peer average.
-    plot_data = pd.DataFrame(
-        {
-            "Date": normalized.index,
-            ticker: normalized[ticker],
-            "Peer average": peer_avg,
-        }
-    ).melt(id_vars=["Date"], var_name="Series", value_name="Price")
+comparison["opt_out_rate"] = (
+    comparison["opt_outs"] /
+    comparison["trial_starts"]
+) * 100
 
-    chart = (
-        alt.Chart(plot_data)
-        .mark_line()
-        .encode(
-            alt.X("Date:T"),
-            alt.Y("Price:Q").scale(zero=False),
-            alt.Color(
-                "Series:N",
-                scale=alt.Scale(domain=[ticker, "Peer average"], range=["red", "gray"]),
-                legend=alt.Legend(orient="bottom"),
-            ),
-            alt.Tooltip(["Date", "Series", "Price"]),
-        )
-        .properties(title=f"{ticker} vs peer average", height=300)
-    )
+st.dataframe(
+    comparison[
+        [
+            "product_id",
+            "trial_starts",
+            "active_trials",
+            "conversions",
+            "conversion_rate",
+            "opt_out_rate",
+            "subscribers",
+            "revenue",
+            "tcv"
+        ]
+    ],
+    use_container_width=True
+)
 
-    cell = cols[(i * 2) % NUM_COLS].container(border=True)
-    cell.write("")
-    cell.altair_chart(chart, use_container_width=True)
+# --------------------------------------------------
+# Revenue Index
+# --------------------------------------------------
 
-    # Create Delta chart
-    plot_data = pd.DataFrame(
-        {
-            "Date": normalized.index,
-            "Delta": normalized[ticker] - peer_avg,
-        }
-    )
+st.subheader("Peer Revenue Index")
 
-    chart = (
-        alt.Chart(plot_data)
-        .mark_area()
-        .encode(
-            alt.X("Date:T"),
-            alt.Y("Delta:Q").scale(zero=False),
-        )
-        .properties(title=f"{ticker} minus peer average", height=300)
-    )
+selected_revenue = float(
+    latest.loc[
+        latest["product_id"] == selected_product,
+        "revenue"
+    ].iloc[0]
+)
 
-    cell = cols[(i * 2 + 1) % NUM_COLS].container(border=True)
-    cell.write("")
-    cell.altair_chart(chart, use_container_width=True)
+latest["revenue_index"] = (
+    latest["revenue"] /
+    selected_revenue
+) * 100
 
-""
-""
+fig = px.bar(
+    latest,
+    x="product_id",
+    y="revenue_index",
+    color="revenue_index"
+)
 
-"""
-## Raw data
-"""
-
-data
+st.plotly_chart(fig, use_container_width=True)
