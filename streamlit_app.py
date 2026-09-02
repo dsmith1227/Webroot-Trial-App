@@ -189,14 +189,10 @@ with tab4:
     )
 
     st.dataframe(
-        renewal_summary.style.format({
-            "Auto_Renew_Sales": "{:,0f}",
-            "Manual_Renew_Sales": "{:,0f}"
-        }),    
+        renewal_summary,
         use_container_width=True,
         hide_index=True
     )
-
 # --------------------------------------------------
 # Raw Data
 # --------------------------------------------------
