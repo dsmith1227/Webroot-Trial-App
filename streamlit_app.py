@@ -128,7 +128,7 @@ with tab1:
     st.subheader("Trial Status Summary")
 
     trial_summary = (
-        df.groupby("product_id")
+        filtered_df.groupby("product_id")
         .agg(
             Trial_Starts=("trial_starts", "sum"),
             Active_Trials=("active_trials", "sum"),
@@ -193,7 +193,7 @@ with tab4:
     st.subheader("Auto Renew vs Manual Renew Sales")
 
     renewal_summary = (
-        df.groupby("product_id")
+        filtered_df.groupby("product_id")
         .agg(
             Auto_Renew_Sales=("auto_renew_sales", "sum"),
             Manual_Renew_Sales=("manual_renew_sales", "sum")
