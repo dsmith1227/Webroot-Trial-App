@@ -13,11 +13,24 @@ st.set_page_config(
 # Data Loading
 # --------------------------------------------------
 
-@st.cache_data
-def load_data():
-    return pd.read_csv("product_metrics.csv")
+# --------------------------------------------------
+# Data Upload
+# --------------------------------------------------
 
-df = load_data()
+uploaded_file = st.sidebar.file_uploader(
+    "Upload Product Metrics CSV",
+    type=["csv"]
+)
+
+if uploaded_file is None:
+    st.info("Please upload a CSV file to begin.")
+    st.stop()
+
+@st.cache_data
+def load_data(file):
+    return pd.read_csv(file)
+
+df = load_data(uploaded_file)
 
 # --------------------------------------------------
 # Sidebar
