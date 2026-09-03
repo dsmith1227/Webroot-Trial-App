@@ -152,7 +152,7 @@ with tab1:
         key="trial_chart"
     )
 
-    metric = st.selectbox(
+    metric = st.selectbox.multiselect(
         "Metric",
         [
             "trial_starts",
