@@ -125,16 +125,19 @@ with tab1:
 
     st.subheader("Trial Status")
 
-    trial_summary = filtered_df[
-        [
-            "month",
-            "product_id",
-            "trial_starts",
-            "active_trials",
-            "opt_outs",
-            "conversions"
+    trial_summary = (
+        filtered_df[
+            [
+                "month",
+                "product_id",
+                "trial_starts",
+                "active_trials",
+                "opt_outs",
+                "conversions"
+            ]
         ]
-    ]
+        .sort_values(["month", "product_id"])
+    )
 
     st.dataframe(
         trial_summary,
@@ -152,46 +155,57 @@ with tab1:
         key="trial_chart"
     )
 
-    metric = st.selectbox.multiselect(
-        "Metric",
+    metrics = st.multiselect(
+        "Metrics",
         [
             "trial_starts",
             "active_trials",
             "opt_outs",
             "conversions"
         ],
-        key="trial_metric"
+        default=["trial_starts"],
+        key="trial_metrics"
     )
 
-    if chart_type == "Bar":
-        fig = px.bar(
-            filtered_df,
-            x="month",
-            y=metric,
-            color="product_id"
+    for metric in metrics:
+
+        st.markdown(
+            f"### {metric.replace('_', ' ').title()}"
         )
 
-    elif chart_type == "Line":
-        fig = px.line(
-            filtered_df,
-            x="month",
-            y=metric,
-            color="product_id",
-            markers=True
-        )
+        if chart_type == "Bar":
 
-    else:
-        fig = px.area(
-            filtered_df,
-            x="month",
-            y=metric,
-            color="product_id"
-        )
+            fig = px.bar(
+                filtered_df,
+                x="month",
+                y=metric,
+                color="product_id",
+                barmode="group"
+            )
 
-    st.plotly_chart(
-        fig,
-        use_container_width=True
-    )
+        elif chart_type == "Line":
+
+            fig = px.line(
+                filtered_df,
+                x="month",
+                y=metric,
+                color="product_id",
+                markers=True
+            )
+
+        else:
+
+            fig = px.area(
+                filtered_df,
+                x="month",
+                y=metric,
+                color="product_id"
+            )
+
+        st.plotly_chart(
+            fig,
+            use_container_width=True
+        )
 
 # --------------------------------------------------
 # TAB 2 - TCV
